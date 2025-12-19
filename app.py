@@ -123,3 +123,4 @@ if st.button("Analyze Message"):
     st.header("📊 Analysis Results")
 
     st.markdown(analysis)
+
