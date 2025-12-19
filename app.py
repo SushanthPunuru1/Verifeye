@@ -1,123 +1,125 @@
 import streamlit as st
 import google.generativeai as genai
+from datetime import datetime
 
 
-genai.configure(api_key = "AIzaSyCr-Yeq7H31VnXnk9K5ryaI8bW5hmdsh08")
-
-
+API_KEY_VALUE = st.secrets["API_KEY"]
+genai.configure(api_key = API_KEY_VALUE)
 model = genai.GenerativeModel("gemini-2.5-flash")
 
 
-# --- App Title ---
-st.title("Social Engineering & Phishing Detector")
-st.write("Paste a message or URL to check for social engineering or phishing risks.")
+if "history" not in st.session_state:
+    st.session_state.history = []
 
-# --- User Info ---
-name = st.text_input("Enter your name:")
 
-# --- Message Input ---
-content = st.text_area("Paste the content of the message/email you received:")
+st.set_page_config(page_title="CyberShield", layout="centered")
 
-# --- Survey Section ---
-st.header("Survey")
+st.title("Social Engineering and Phishing Detector")
+st.write("Analyze messages for **social engineering and phishing risks**.")
 
-howRecieved = st.text_input("How did you receive this message?")
 
-# Yes / No + conditional inputs
-youKnow = st.radio("Is the sender someone you know?", ("No", "Yes"), horizontal=True)
-youKnowDetails = ""
-if youKnow == "Yes":
-    youKnowDetails = st.text_input("Who is the sender?")
+name = st.text_input("Your name")
 
-claimedAcc = st.radio(
-    "Do you have an account with the claimed sender?",
-    ("No", "Yes"),
-    horizontal=True
+content = st.text_area(
+    "Paste the message or email you received",
+    height=180
 )
-claimedAccDetails = ""
-if claimedAcc == "Yes":
-    claimedAccDetails = st.text_input("Which company or service?")
 
-actionTaken = st.radio(
-    "Did you take any action because of this message?",
-    ("No", "Yes"),
-    horizontal=True
+message_type = st.radio(
+    "Message type",
+    ("Email", "SMS/Text", "Social Media", "Instant Message", "Other")
 )
-actionTakenDetails = ""
-if actionTaken == "Yes":
-    actionTakenDetails = st.text_input("What action did you take?")
 
-previousCom = st.radio(
+concern = st.slider("How concerned are you?", 1, 10, 5)
+
+st.divider()
+st.header("Quick Survey")
+
+how_received = st.text_input("How did you receive this message?")
+
+
+def yes_no_question(label, placeholder):
+    answer = st.radio(label, ("No", "Yes"), horizontal=True)
+    details = ""
+    if answer == "Yes":
+        details = st.text_input(placeholder)
+    return f"{answer} - {details}" if details else answer
+
+know_sender = yes_no_question(
+    "Do you know the sender?",
+    "Who is the sender?"
+)
+
+claimed_account = yes_no_question(
+    "Do you have an account with the claimed company?",
+    "Which company/service?"
+)
+
+action_taken = yes_no_question(
+    "Have you taken any action already?",
+    "What action did you take?"
+)
+
+previous_comm = yes_no_question(
     "Have you communicated with this sender before?",
-    ("No", "Yes"),
-    horizontal=True
-)
-previousComDetails = ""
-if previousCom == "Yes":
-    previousComDetails = st.text_input("Describe the prior communication")
-
-deviceUsed = st.text_input("What device did you use?")
-region = st.text_input("Your region/country?")
-
-concernLevel = st.slider("How concerned are you (1–10)?", 1, 10, 5)
-
-messageType = st.radio(
-    "Type of message received:",
-    ("Email", "SMS/Text Message", "Social Media", "Instant Message", "Other")
+    "Describe previous communication"
 )
 
-# --- Sidebar: URL Checker ---
-st.sidebar.header("Phishing URL Checker")
-phishingUrl = st.sidebar.text_input("Enter URL:")
+device = st.text_input("Device used (phone, laptop, etc.)")
+region = st.text_input("Your country/region")
+
+
+st.sidebar.header("🔗 URL Checker")
+phishing_url = st.sidebar.text_input("Paste a suspicious URL")
 
 if st.sidebar.button("Check URL"):
-    with st.spinner("Analyzing URL..."):
-        prompt = f"""
-        You are an AI cybersecurity analyst.
-        Analyze the following URL for phishing risks:
+    url_prompt = f"""
+    Analyze this URL for phishing risk:
 
-        URL: {phishingUrl}
+    URL: {phishing_url}
 
-        Provide:
-        - Risk level (Low/Medium/High)
-        - Why it may be dangerous
-        - Recommended next steps
-        """
-        urlAnalysis = model.generate_content(prompt)
-        st.sidebar.write(urlAnalysis.text)
+    Provide:
+    - Risk level (Low/Medium/High)
+    - Why it is risky or safe
+    - Recommended action
+    """
+    url_result = model.generate_content(url_prompt)
+    st.sidebar.write(url_result.text)
 
-# --- Analyze Message ---
+
 if st.button("Analyze Message"):
-    if not content.strip():
-        st.warning("Please paste a message to analyze.")
-    else:
-        with st.spinner("Analyzing message..."):
-            prompt = f"""
-            You are an AI cybersecurity analyst analyzing a potentially malicious message.
+    prompt = f"""
+    You are a cybersecurity analyst.
 
-            Message content:
-            {content}
+    MESSAGE:
+    {content}
 
-            Context:
-            - Message type: {messageType}
-            - How received: {howRecieved}
-            - Know sender: {youKnow} ({youKnowDetails})
-            - Claimed account: {claimedAcc} ({claimedAccDetails})
-            - Action taken: {actionTaken} ({actionTakenDetails})
-            - Previous communication: {previousCom} ({previousComDetails})
-            - Device used: {deviceUsed}
-            - Region: {region}
-            - User concern level: {concernLevel}/10
+    CONTEXT:
+    - Message type: {message_type}
+    - How received: {how_received}
+    - Know sender: {know_sender}
+    - Claimed account: {claimed_account}
+    - Action taken: {action_taken}
+    - Previous communication: {previous_comm}
+    - Device: {device}
+    - Region: {region}
+    - User concern: {concern}/10
 
-            Tasks:
-            1. Identify social engineering tactics.
-            2. Identify phishing indicators.
-            3. Give Social Engineering Risk (Low/Medium/High).
-            4. Give Phishing Risk (Low/Medium/High).
-            5. Highlight suspicious phrases or links.
-            6. Provide clear next steps.
-            """
+    TASKS:
+    1. Identify social engineering tactics.
+    2. Identify phishing indicators.
+    3. Give Social Engineering Risk (Low/Medium/High).
+    4. Give Phishing Risk (Low/Medium/High).
+    5. Give an overall risk score (0–100).
+    6. Highlight suspicious phrases.
+    7. Provide clear next steps.
+    """
+    
+    result = model.generate_content(prompt)
 
-            result = model.generate_content(prompt)
-            st.subheader("Analysis Results")
-            st.write(result.text)
+    analysis = result.text
+   
+    st.divider()
+    st.header("📊 Analysis Results")
+
+    st.markdown(analysis)
