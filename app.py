@@ -7,11 +7,6 @@ API_KEY_VALUE = st.secrets["API_KEY"]
 genai.configure(api_key = API_KEY_VALUE)
 model = genai.GenerativeModel("gemini-2.5-flash")
 
-
-if "history" not in st.session_state:
-    st.session_state.history = []
-
-
 st.set_page_config(page_title="Verifeye", layout="centered")
 
 st.title("Verifeye")
@@ -123,5 +118,6 @@ if st.button("Analyze Message"):
     st.header("📊 Analysis Results")
 
     st.markdown(analysis)
+
 
 
