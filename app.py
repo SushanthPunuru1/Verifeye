@@ -12,9 +12,9 @@ if "history" not in st.session_state:
     st.session_state.history = []
 
 
-st.set_page_config(page_title="CyberShield", layout="centered")
+st.set_page_config(page_title="Verifeye", layout="centered")
 
-st.title("Social Engineering and Phishing Detector")
+st.title("Verifeye")
 st.write("Analyze messages for **social engineering and phishing risks**.")
 
 
@@ -123,4 +123,5 @@ if st.button("Analyze Message"):
     st.header("📊 Analysis Results")
 
     st.markdown(analysis)
+
 
